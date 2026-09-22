@@ -42,6 +42,52 @@ const router: IRouter = Router();
 
 const today = () => new Date().toISOString().slice(0, 10);
 const dateKey = (date: Date) => date.toISOString().slice(0, 10);
+type GeminiResponse = {
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string }> };
+  }>;
+};
+
+async function askGemini(prompt: string): Promise<string | null> {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash";
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 300 },
+        }),
+        signal: controller.signal,
+      },
+    );
+    if (!response.ok) {
+      console.warn(`Gemini request failed with status ${response.status}`);
+      return null;
+    }
+    const data = (await response.json()) as GeminiResponse;
+    return data.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text ?? "")
+      .join("")
+      .trim() || null;
+  } catch (error) {
+    console.warn(
+      "Gemini request failed; using local coach response",
+      error instanceof Error ? error.message : error,
+    );
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 const daysAgo = (days: number) => {
   const date = new Date();
   date.setUTCDate(date.getUTCDate() - days);
@@ -456,7 +502,8 @@ router.post("/coach/message", async (req, res): Promise<void> => {
     response = "خلّي هدفك كباية 250 مل كل ساعتين تقريباً، وخصوصاً قبل الوجبة أو بعد التمرين. سجّلها أول بأول عشان نعرف يومك فعلاً.";
     suggestions = ["أضف كباية مية", "سجّل تمرين", "ماكروز اليوم"];
   }
-  void prompt;
+  const geminiResponse = await askGemini(prompt);
+  if (geminiResponse) response = geminiResponse;
   res.json(SendCoachMessageResponse.parse({
     id: Date.now(),
     role: "assistant",
