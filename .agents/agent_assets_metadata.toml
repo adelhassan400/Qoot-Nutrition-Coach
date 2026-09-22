@@ -1,0 +1,30 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "SAROFhMkMGGt9ThHsCZmr"
+uri = "file://attached_assets/generated_images/qoot-app-icon-master.png"
+type = "image"
+title = "Qoot app icon master"
+description = "1024px master icon for قوت / Qoot: emerald Qaf-and-leaf mark on a near-black background."
+logical_id = "e229816a-1657-48e2-9f58-ab952bc79154"
+content_hash = "sha256:36a9154b447efa7d269eb0f4d87de35095249aec0008c081684c3b6bf067fcd8"
+size = 824472
+mtime_ms = 1790114444934
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:5921ab63-a24b-4c76-ae19-8432bef28ce8/e229816a-1657-48e2-9f58-ab952bc79154/d982dd13-7994-491a-bc72-ce50df1ddfe4"
+storage_version_token = "1790114487193492"
+content_type = "image/png"
+
+[[outputs]]
+id = "HlFnlvNMkjJUHZ_6ak4_j"
+uri = "file://artifacts/qoot/public/icons/icon-512.png"
+type = "image"
+title = "Qoot PWA icon"
+description = "512px PWA/home-screen icon wired into the Qoot web app manifest."
+logical_id = "2cbfbeda-8c1d-487b-9c4c-dcc326782d35"
+content_hash = "sha256:899c53426e23cf4148b7df0cee3902b0e50b3c3b1239f6b3a11f453e69936a99"
+size = 201396
+mtime_ms = 1790114468094
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:5921ab63-a24b-4c76-ae19-8432bef28ce8/2cbfbeda-8c1d-487b-9c4c-dcc326782d35/1c99c5cd-2153-4804-b6ac-9ea3b6af20e4"
+storage_version_token = "1790114487752570"
+content_type = "image/png"
