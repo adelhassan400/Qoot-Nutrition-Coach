@@ -122,7 +122,7 @@ function DashboardPage() {
     { query: { enabled: foodQuery.length > 1, queryKey: getSearchFoodQueryKey({ q: foodQuery || ' ', limit: 5 }) } },
   );
   const dashboard = dashboardQ.data;
-  const meals = mealsQ.data ?? dashboard?.meals ?? [];
+  const meals = Array.isArray(mealsQ.data) ? mealsQ.data : Array.isArray(dashboard?.meals) ? dashboard.meals : [];
   const profile = profileQ.data;
   const waterMl = localWater ?? dashboard?.waterMl ?? 0;
   const plan = planQ.data;
