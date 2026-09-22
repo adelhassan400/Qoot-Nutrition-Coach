@@ -23,4 +23,5 @@ export interface Profile {
   stepTarget: number;
   unitSystem: ProfileUnitSystem;
   avatarInitials: string;
+  onboardingCompleted: boolean;
 }

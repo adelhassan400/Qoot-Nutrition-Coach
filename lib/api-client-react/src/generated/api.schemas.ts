@@ -57,6 +57,7 @@ export interface Profile {
   stepTarget: number;
   unitSystem: ProfileUnitSystem;
   avatarInitials: string;
+  onboardingCompleted: boolean;
 }
 
 export type ProfileUpdateSex = typeof ProfileUpdateSex[keyof typeof ProfileUpdateSex];
@@ -308,10 +309,30 @@ export interface Food {
   category: string;
 }
 
+export type CoachTurnRole = typeof CoachTurnRole[keyof typeof CoachTurnRole];
+
+
+export const CoachTurnRole = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export interface CoachTurn {
+  role: CoachTurnRole;
+  message: string;
+}
+
+export interface CoachContext {
+  profile?: Profile;
+  plan?: Plan;
+  dashboard?: Dashboard;
+  recentMessages?: CoachTurn[];
+}
+
 export interface CoachMessageInput {
   /** @minLength 1 */
   message: string;
-  context?: string;
+  context?: CoachContext;
 }
 
 export type CoachMessageRole = typeof CoachMessageRole[keyof typeof CoachMessageRole];

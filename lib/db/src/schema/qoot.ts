@@ -1,5 +1,6 @@
 import { createInsertSchema } from "drizzle-zod";
 import {
+  boolean,
   date,
   integer,
   jsonb,
@@ -24,6 +25,7 @@ export const profilesTable = pgTable("qoot_profiles", {
   stepTarget: integer("step_target").notNull(),
   unitSystem: text("unit_system").notNull(),
   avatarInitials: text("avatar_initials").notNull(),
+  onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
 });
 
 export const nutritionPlansTable = pgTable("qoot_nutrition_plans", {

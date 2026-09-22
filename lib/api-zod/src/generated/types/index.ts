@@ -7,9 +7,12 @@
  */
 
 export * from './calorieSummary';
+export * from './coachContext';
 export * from './coachMessage';
 export * from './coachMessageInput';
 export * from './coachMessageRole';
+export * from './coachTurn';
+export * from './coachTurnRole';
 export * from './dashboard';
 export * from './dateQueryParameter';
 export * from './food';

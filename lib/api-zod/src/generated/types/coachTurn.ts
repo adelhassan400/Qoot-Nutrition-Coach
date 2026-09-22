@@ -5,10 +5,9 @@
  * Qoot nutrition and fitness coach API
  * OpenAPI spec version: 0.1.0
  */
-import type { CoachContext } from './coachContext';
+import type { CoachTurnRole } from './coachTurnRole';
 
-export interface CoachMessageInput {
-  /** @minLength 1 */
+export interface CoachTurn {
+  role: CoachTurnRole;
   message: string;
-  context?: CoachContext;
 }

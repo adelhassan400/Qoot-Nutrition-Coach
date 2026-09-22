@@ -119,6 +119,7 @@ async function ensureSeeded() {
     stepTarget: 8000,
     unitSystem: "metric",
     avatarInitials: "أح",
+    onboardingCompleted: false,
   } as const;
   const [profile] = await db.insert(profilesTable).values(profileValues).returning();
   const targets = calculatePlan(profile);
@@ -205,7 +206,7 @@ router.put("/profile", async (req, res): Promise<void> => {
   const initials = parsed.data.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("");
   const [updated] = await db
     .update(profilesTable)
-    .set({ ...parsed.data, avatarInitials: initials })
+    .set({ ...parsed.data, avatarInitials: initials, onboardingCompleted: true })
     .where(eq(profilesTable.id, profile.id))
     .returning();
   const targets = calculatePlan(updated);
@@ -413,19 +414,49 @@ router.post("/coach/message", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const [profile, plan] = await Promise.all([currentProfile(), currentPlan()]);
+  const date = today();
+  const meals = await db.select().from(mealsTable).where(eq(mealsTable.date, date)).orderBy(asc(mealsTable.loggedAt));
+  const consumed = meals.reduce((sum, meal) => sum + meal.calories, 0);
+  const remaining = Math.max(0, plan.calories - consumed);
+  const protein = meals.reduce((sum, meal) => sum + meal.protein, 0);
+  const carbs = meals.reduce((sum, meal) => sum + meal.carbs, 0);
+  const fat = meals.reduce((sum, meal) => sum + meal.fat, 0);
+  const mealNames = meals.map((meal) => meal.name).join("، ") || "لسه مفيش وجبات";
+  const context = parsed.data.context;
+  const contextProfile = context?.profile?.name ? context.profile : profile;
+  const contextPlan = context?.plan?.calories ? context.plan : plan;
+  const contextDashboard = context?.dashboard;
+  const prompt = [
+    "أنت كوتش قوت، مساعد تغذية مصري يتكلم بالمصرية وبأسلوب عملي مش حُكمي.",
+    `اسم المستخدم: ${contextProfile.name}. الهدف: ${contextProfile.goal}. الوزن: ${contextProfile.weightKg} كجم إلى ${contextProfile.targetWeightKg} كجم.`,
+    `الخطة: ${contextPlan.calories} سعرة، ${contextPlan.protein} جم بروتين، ${contextPlan.carbs} جم كربوهيدرات، ${contextPlan.fat} جم دهون.`,
+    `اليوم: ${contextDashboard?.calories.consumed ?? consumed} سعرة مستهلكة، ${contextDashboard?.calories.remaining ?? remaining} سعرة متبقية، والوجبات: ${mealNames}.`,
+    `رسالة المستخدم: ${parsed.data.message}`,
+  ].join("\n");
   const message = parsed.data.message.toLocaleLowerCase("ar");
-  let response = "عاش يا بطل. خلّينا نكمّل يومك بخطوة بسيطة: اختار مصدر بروتين محلي، واشرب كباية مية، وخلي وجبتك الجاية متوازنة.";
-  let suggestions = ["اقتراح وجبة بروتين اقتصادي", "قد إيه باقي من سعراتي؟", "سجّل تمرين"];
-  if (message.includes("بروتين") || message.includes("protein")) {
-    response = "لو عايز تزود البروتين من غير ما تعدّي ميزانيتك: جبنة قريش، بيض، فول، وعدس اختيارات ممتازة. جبنة قريش بالطماطم هتديك حوالي 27 جم بروتين في 150 جم.";
-    suggestions = ["سجّل جبنة قريش", "اعمل لي وجبة بفول", "كم بروتين أحتاج اليوم؟"];
+  let response = `عاش يا ${profile.name.split(" ")[0]}. أنا شايف يومك: اتاخد ${consumed} من ${plan.calories} سعرة، فاضلك ${remaining} سعرة. خلّي الوجبة الجاية فيها بروتين وخضار عشان تكمّل براحة.`;
+  let suggestions = ["أعمل إيه في العشا؟", "فاضلي كام؟", "إزاي أزوّد البروتين؟"];
+  if (message.includes("فاضل") || message.includes("باقي") || message.includes("سعر") || message.includes("ميزاني")) {
+    response = `فاضلك النهارده حوالي ${remaining} سعرة من هدف ${plan.calories}. أكلت ${consumed} سعرة، و${protein} جم بروتين من هدف ${plan.protein} جم.`;
+    suggestions = ["أعمل إيه في العشا؟", "وجبة بروتين اقتصادية", "أحتاج كام بروتين؟"];
+  } else if (message.includes("عشا") || message.includes("عشاء") || message.includes("وجبة")) {
+    const dinnerCalories = Math.min(remaining, Math.max(350, Math.round(remaining * 0.45)));
+    response = remaining > 0
+      ? `للعشا عندك مساحة حوالي ${dinnerCalories} سعرة. اختار 150 جم فراخ أو علبة تونة، طبق سلطة كبير، ونصف رغيف عيش بلدي. كده تزود البروتين من غير ما تتخطى ميزانيتك.`
+      : "أنت قفلت سعراتك تقريباً النهارده، فلو جعان اختار حاجة خفيفة زي زبادي لايت أو خضار، ومش محتاج تعاقب نفسك.";
+    suggestions = ["بديل نباتي للعشا", "قدّر لي عشا مصري", "أعمل إيه لو جعت بالليل؟"];
+  } else if (message.includes("بروتين") || message.includes("protein")) {
+    response = `هدفك ${plan.protein} جم بروتين، وأنت وصلت ${protein} جم لحد دلوقتي. جبنة قريش، بيض، فول، وعدس اختيارات مصرية اقتصادية؛ جبنة قريش بالطماطم تعطي حوالي 27 جم في 150 جم.`;
+    suggestions = ["سجّل جبنة قريش", "اعمل لي وجبة بفول", "أعمل إيه في العشا؟"];
   } else if (message.includes("عزوم") || message.includes("عزومة") || message.includes("cheat")) {
-    response = "في العزومة خليك ذكي مش مثالي: ابدأ بالسلطة والبروتين، اختار حصة واحدة من النشويات، وسيب مساحة للحلو. وجبة واحدة مش هتحدد نتيجتك.";
-    suggestions = ["اختيارات ذكية في العزومة", "قدّر لي طبق كشري", "كرر وجبة امبارح"];
+    response = `في العزومة خليك ذكي مش مثالي. عندك ${remaining} سعرة متبقية، فابدأ بالسلطة والبروتين، خُد حصة واحدة نشويات، وسيب مساحة للحلو. وجبة واحدة مش هتحدد نتيجتك.`;
+    suggestions = ["اختيارات ذكية في العزومة", "قدّر لي طبق كشري", "فاضلي كام؟"];
   } else if (message.includes("مياه") || message.includes("مية") || message.includes("water")) {
-    response = "أنت على الطريق الصح. خلّي هدفك كباية 250 مل كل ساعتين تقريباً، وخصوصاً قبل الوجبة أو بعد التمرين.";
+    response = "خلّي هدفك كباية 250 مل كل ساعتين تقريباً، وخصوصاً قبل الوجبة أو بعد التمرين. سجّلها أول بأول عشان نعرف يومك فعلاً.";
     suggestions = ["أضف كباية مية", "سجّل تمرين", "ماكروز اليوم"];
   }
+  void prompt;
   res.json(SendCoachMessageResponse.parse({
     id: Date.now(),
     role: "assistant",

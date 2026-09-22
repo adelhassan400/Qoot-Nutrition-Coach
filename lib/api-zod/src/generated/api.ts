@@ -32,7 +32,8 @@ export const GetProfileResponse = zod.object({
   "goal": zod.enum(['lose', 'build', 'maintain']),
   "stepTarget": zod.number().int(),
   "unitSystem": zod.enum(['metric', 'imperial']),
-  "avatarInitials": zod.string()
+  "avatarInitials": zod.string(),
+  "onboardingCompleted": zod.boolean()
 })
 
 
@@ -82,7 +83,8 @@ export const UpdateProfileResponse = zod.object({
   "goal": zod.enum(['lose', 'build', 'maintain']),
   "stepTarget": zod.number().int(),
   "unitSystem": zod.enum(['metric', 'imperial']),
-  "avatarInitials": zod.string()
+  "avatarInitials": zod.string(),
+  "onboardingCompleted": zod.boolean()
 })
 
 
@@ -433,7 +435,94 @@ export const SearchFoodResponse = zod.array(SearchFoodResponseItem)
 
 export const SendCoachMessageBody = zod.object({
   "message": zod.string().min(1),
-  "context": zod.string().optional()
+  "context": zod.object({
+  "profile": zod.object({
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "age": zod.number().int(),
+  "heightCm": zod.number(),
+  "weightKg": zod.number(),
+  "targetWeightKg": zod.number(),
+  "sex": zod.enum(['male', 'female']),
+  "activityLevel": zod.enum(['sedentary', 'light', 'moderate', 'high']),
+  "goal": zod.enum(['lose', 'build', 'maintain']),
+  "stepTarget": zod.number().int(),
+  "unitSystem": zod.enum(['metric', 'imperial']),
+  "avatarInitials": zod.string(),
+  "onboardingCompleted": zod.boolean()
+}).optional(),
+  "plan": zod.object({
+  "version": zod.string(),
+  "calories": zod.number().int(),
+  "protein": zod.number().int(),
+  "carbs": zod.number().int(),
+  "fat": zod.number().int(),
+  "fiber": zod.number().int(),
+  "bmr": zod.number().int(),
+  "tdee": zod.number().int(),
+  "updatedAt": zod.coerce.date(),
+  "history": zod.array(zod.object({
+  "version": zod.string(),
+  "reason": zod.string(),
+  "calories": zod.number().int(),
+  "createdAt": zod.coerce.date()
+}))
+}).optional(),
+  "dashboard": zod.object({
+  "date": zod.coerce.date(),
+  "calories": zod.object({
+  "target": zod.number().int(),
+  "consumed": zod.number().int(),
+  "burned": zod.number().int(),
+  "remaining": zod.number().int()
+}),
+  "macros": zod.object({
+  "protein": zod.object({
+  "current": zod.number().int(),
+  "target": zod.number().int()
+}),
+  "carbs": zod.object({
+  "current": zod.number().int(),
+  "target": zod.number().int()
+}),
+  "fat": zod.object({
+  "current": zod.number().int(),
+  "target": zod.number().int()
+}),
+  "fiber": zod.object({
+  "current": zod.number().int(),
+  "target": zod.number().int()
+})
+}),
+  "waterMl": zod.number().int(),
+  "meals": zod.array(zod.object({
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "mealType": zod.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  "calories": zod.number().int(),
+  "protein": zod.number().int(),
+  "carbs": zod.number().int(),
+  "fat": zod.number().int(),
+  "fiber": zod.number().int(),
+  "portion": zod.string(),
+  "loggedAt": zod.coerce.date(),
+  "date": zod.coerce.date()
+})),
+  "workouts": zod.array(zod.object({
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "workoutType": zod.enum(['resistance', 'cardio', 'steps']),
+  "durationMinutes": zod.number().int(),
+  "caloriesBurned": zod.number().int(),
+  "recordedAt": zod.coerce.date()
+})),
+  "streak": zod.number().int()
+}).optional(),
+  "recentMessages": zod.array(zod.object({
+  "role": zod.enum(['user', 'assistant']),
+  "message": zod.string()
+})).optional()
+}).optional()
 })
 
 export const SendCoachMessageResponse = zod.object({

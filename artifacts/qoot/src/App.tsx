@@ -155,17 +155,41 @@ function DashboardPage() {
 
 function CoachPage() {
   const send = useSendCoachMessage();
+  const profileQ = useGetProfile();
+  const planQ = useGetPlan();
+  const dashboardQ = useGetDashboard();
   const [message, setMessage] = useState('');
+  const [suggestions, setSuggestions] = useState(['أعمل إيه في العشا؟', 'فاضلي كام؟', 'إزاي أزوّد البروتين؟']);
   const [messages, setMessages] = useState<{ id: string | number; role: 'user' | 'assistant'; message: string }[]>([
-    { id: 'welcome', role: 'assistant', message: 'أهلاً يا محمد. أنا معاك خطوة بخطوة — من غير حرمان ومن غير كلام معقّد. تحب نبدأ بإيه؟' },
+    { id: 'welcome', role: 'assistant', message: `أهلاً يا ${profileQ.data?.name?.split(' ')[0] ?? 'بطل'}. أنا شايف يومك وخطتك، واسألني عن أي قرار يخص أكلك أو تمرينك.` },
   ]);
-  const suggestions = ['أعمل إيه في العشا؟', 'عايز بديل للعيش', 'عندي تمرين النهارده'];
   const submit = (text = message) => {
     if (!text.trim() || send.isPending) return;
-    const clean = text.trim(); setMessage(''); setMessages((m) => [...m, { id: `u-${Date.now()}`, role: 'user', message: clean }]);
-    send.mutate({ data: { message: clean, context: 'Arabic Egyptian nutrition coach conversation' } }, { onSuccess: (reply) => setMessages((m) => [...m, { id: reply.id, role: 'assistant', message: reply.message }]), onError: () => { toast.error('الكوتش مشغول شوية'); setMessages((m) => [...m, { id: `e-${Date.now()}`, role: 'assistant', message: 'معلش حصل عطل صغير. جرّب تبعتلي تاني بعد لحظة.' }]); } });
+    const clean = text.trim();
+    setMessage('');
+    setMessages((current) => [...current, { id: `u-${Date.now()}`, role: 'user', message: clean }]);
+    send.mutate({
+      data: {
+        message: clean,
+        context: {
+          profile: profileQ.data,
+          plan: planQ.data,
+          dashboard: dashboardQ.data,
+          recentMessages: messages.slice(-8).map(({ role, message: textValue }) => ({ role, message: textValue })),
+        },
+      },
+    }, {
+      onSuccess: (reply) => {
+        setSuggestions(reply.suggestions);
+        setMessages((current) => [...current, { id: reply.id, role: 'assistant', message: reply.message }]);
+      },
+      onError: () => {
+        toast.error('الكوتش مشغول شوية');
+        setMessages((current) => [...current, { id: `e-${Date.now()}`, role: 'assistant', message: 'معلش حصل عطل صغير. جرّب تبعتلي تاني بعد لحظة.' }]);
+      },
+    });
   };
-  return <div className="qoot-page-in mx-auto max-w-4xl space-y-7"><header><p className="mb-2 text-sm font-bold text-primary">الكوتش بتاعك</p><h1 className="qoot-display text-4xl font-semibold">اتكلم براحتك، أنا سامعك</h1><p className="mt-2 text-muted-foreground">اسأل عن الأكل المصري، التمرين، أو يومك اللي ما مشيش زي ما خططت.</p></header><div className="qoot-card flex min-h-[620px] flex-col rounded-3xl"><div className="flex items-center gap-3 border-b border-border/70 p-5"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary text-primary-foreground"><Sparkles className="h-5 w-5" /></span><div><p className="font-bold">كوتش قوت</p><p className="text-xs text-primary">متاح دلوقتي</p></div><span className="mr-auto h-2.5 w-2.5 rounded-full bg-primary" /></div><div className="flex-1 space-y-5 overflow-auto p-5 sm:p-7">{messages.map((item) => <div key={item.id} data-testid={`message-coach-${item.id}`} className={`flex ${item.role === 'user' ? 'justify-start' : 'justify-end'}`}><div className={`max-w-[84%] rounded-2xl px-4 py-3 text-sm leading-7 ${item.role === 'user' ? 'rounded-bl-sm bg-primary text-primary-foreground' : 'rounded-br-sm bg-secondary text-foreground'}`}>{item.message}</div></div>)}{send.isPending && <div className="flex justify-end"><div className="rounded-2xl rounded-br-sm bg-secondary px-5 py-4"><span className="inline-flex gap-1"><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:.15s]" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:.3s]" /></span></div></div>}</div><div className="border-t border-border/70 p-4"><div className="mb-3 flex flex-wrap gap-2">{suggestions.map((s) => <button key={s} onClick={() => submit(s)} data-testid={`button-suggestion-${s}`} className="qoot-button rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:border-primary hover:text-primary">{s}</button>)}</div><div className="flex items-center gap-2"><input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} data-testid="input-coach-message" className="qoot-input" placeholder="اكتب سؤالك هنا..." /><button onClick={() => submit()} disabled={!message.trim() || send.isPending} data-testid="button-send-coach" className="qoot-button grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground disabled:opacity-40"><Send className="h-5 w-5" /></button></div></div></div></div>;
+  return <div className="qoot-page-in mx-auto max-w-4xl space-y-7"><header><p className="mb-2 text-sm font-bold text-primary">الكوتش بتاعك</p><h1 className="qoot-display text-4xl font-semibold">اتكلم براحتك، أنا سامعك</h1><p className="mt-2 text-muted-foreground">أنا بستخدم أكلك وخطتك النهارده عشان أديك إجابة مناسبة ليك، مش نصيحة عامة.</p></header><div className="qoot-card flex min-h-[620px] flex-col rounded-3xl"><div className="flex items-center gap-3 border-b border-border/70 p-5"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary text-primary-foreground"><Sparkles className="h-5 w-5" /></span><div><p className="font-bold">كوتش قوت</p><p className="text-xs text-primary">شايف بيانات يومك</p></div><span className="mr-auto h-2.5 w-2.5 rounded-full bg-primary" /></div><div className="flex-1 space-y-5 overflow-auto p-5 sm:p-7">{messages.map((item) => <div key={item.id} data-testid={`message-coach-${item.id}`} className={`flex ${item.role === 'user' ? 'justify-start' : 'justify-end'}`}><div className={`max-w-[84%] rounded-2xl px-4 py-3 text-sm leading-7 ${item.role === 'user' ? 'rounded-bl-sm bg-primary text-primary-foreground' : 'rounded-br-sm bg-secondary text-foreground'}`}>{item.message}</div></div>)}{send.isPending && <div className="flex justify-end"><div className="rounded-2xl rounded-br-sm bg-secondary px-5 py-4"><span className="inline-flex gap-1"><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:.15s]" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:.3s]" /></span></div></div>}</div><div className="border-t border-border/70 p-4"><div className="mb-3 flex flex-wrap gap-2">{suggestions.map((s) => <button key={s} onClick={() => submit(s)} data-testid={`button-suggestion-${s}`} className="qoot-button rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:border-primary hover:text-primary">{s}</button>)}</div><div className="flex items-center gap-2"><input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} data-testid="input-coach-message" className="qoot-input" placeholder="اكتب سؤالك هنا..." /><button onClick={() => submit()} disabled={!message.trim() || send.isPending} data-testid="button-send-coach" className="qoot-button grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground disabled:opacity-40"><Send className="h-5 w-5" /></button></div></div></div></div>;
 }
 
 function ScanPage() {

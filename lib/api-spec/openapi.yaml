@@ -342,7 +342,7 @@ components:
         - status
     Profile:
       type: object
-      required: [id, name, age, heightCm, weightKg, targetWeightKg, sex, activityLevel, goal, stepTarget, unitSystem, avatarInitials]
+      required: [id, name, age, heightCm, weightKg, targetWeightKg, sex, activityLevel, goal, stepTarget, unitSystem, avatarInitials, onboardingCompleted]
       properties:
         id: { type: integer }
         name: { type: string }
@@ -356,6 +356,7 @@ components:
         stepTarget: { type: integer }
         unitSystem: { type: string, enum: [metric, imperial] }
         avatarInitials: { type: string }
+        onboardingCompleted: { type: boolean }
     ProfileUpdate:
       type: object
       required: [name, age, heightCm, weightKg, targetWeightKg, sex, activityLevel, goal, stepTarget, unitSystem]
@@ -525,7 +526,27 @@ components:
       required: [message]
       properties:
         message: { type: string, minLength: 1 }
-        context: { type: string }
+        context:
+          $ref: "#/components/schemas/CoachContext"
+    CoachContext:
+      type: object
+      properties:
+        profile:
+          $ref: "#/components/schemas/Profile"
+        plan:
+          $ref: "#/components/schemas/Plan"
+        dashboard:
+          $ref: "#/components/schemas/Dashboard"
+        recentMessages:
+          type: array
+          items:
+            $ref: "#/components/schemas/CoachTurn"
+    CoachTurn:
+      type: object
+      required: [role, message]
+      properties:
+        role: { type: string, enum: [user, assistant] }
+        message: { type: string }
     CoachMessage:
       type: object
       required: [id, role, message, suggestions, createdAt]
