@@ -36,7 +36,7 @@ function IconButton({ label, children, onClick, testId }: { label: string; child
 
 function Logo() {
   return <Link href="/" data-testid="link-logo" className="flex items-center gap-3">
-    <span className="grid h-11 w-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20"><span className="qoot-display text-2xl font-bold">ق</span></span>
+    <img src={`${import.meta.env.BASE_URL}icons/icon-512.png`} alt="شعار قوت" className="h-11 w-11 rounded-2xl object-cover shadow-lg shadow-primary/20" />
     <span className="text-right"><strong className="qoot-display block text-xl leading-none">قوت</strong><small className="mt-1 block text-[10px] font-semibold tracking-[.22em] text-muted-foreground">QOOT COACH</small></span>
   </Link>;
 }
