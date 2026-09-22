@@ -3,13 +3,25 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Qoot nutrition and fitness coach API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: profile
+    description: User profile and plan operations
+  - name: dashboard
+    description: Daily dashboard summaries
+  - name: meals
+    description: Meal logging and repetition
+  - name: progress
+    description: Weight and workout tracking
+  - name: coach
+    description: Conversational coach and meal scanner
+  - name: food
+    description: Egyptian and regional food search
 paths:
   /healthz:
     get:
@@ -24,7 +36,302 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get the current profile
+      responses:
+        "200":
+          description: Current profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+    put:
+      operationId: updateProfile
+      tags: [profile]
+      summary: Update profile and recalculate the plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+  /plan:
+    get:
+      operationId: getPlan
+      tags: [profile]
+      summary: Get the active nutrition plan and history
+      responses:
+        "200":
+          description: Active plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plan"
+  /plan/adjust:
+    post:
+      operationId: adjustPlan
+      tags: [profile]
+      summary: Log an adaptive plan adjustment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlanAdjustmentInput"
+      responses:
+        "201":
+          description: Updated active plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plan"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get today's dashboard summary
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /meals:
+    get:
+      operationId: getMeals
+      tags: [meals]
+      summary: List meals for a day
+      parameters:
+        - $ref: "#/components/parameters/DateQuery"
+      responses:
+        "200":
+          description: Meals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Meal"
+    post:
+      operationId: createMeal
+      tags: [meals]
+      summary: Log a meal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MealInput"
+      responses:
+        "201":
+          description: Logged meal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meal"
+  /meals/{id}:
+    delete:
+      operationId: deleteMeal
+      tags: [meals]
+      summary: Delete a logged meal
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Meal deleted
+  /meals/yesterday:
+    get:
+      operationId: getYesterdayMeals
+      tags: [meals]
+      summary: Get yesterday's meals
+      responses:
+        "200":
+          description: Yesterday's meals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Meal"
+  /meals/repeat-yesterday:
+    post:
+      operationId: repeatYesterdayMeals
+      tags: [meals]
+      summary: Repeat yesterday's meals for today
+      responses:
+        "201":
+          description: Repeated meals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Meal"
+  /weight:
+    get:
+      operationId: getWeightEntries
+      tags: [progress]
+      summary: List weight entries
+      parameters:
+        - $ref: "#/components/parameters/RangeQuery"
+      responses:
+        "200":
+          description: Weight history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WeightEntry"
+    post:
+      operationId: createWeightEntry
+      tags: [progress]
+      summary: Log a weight entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WeightEntryInput"
+      responses:
+        "201":
+          description: Weight entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeightEntry"
+  /workouts:
+    get:
+      operationId: getWorkouts
+      tags: [progress]
+      summary: List workouts
+      parameters:
+        - $ref: "#/components/parameters/DateQuery"
+      responses:
+        "200":
+          description: Workouts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workout"
+    post:
+      operationId: createWorkout
+      tags: [progress]
+      summary: Log a workout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkoutInput"
+      responses:
+        "201":
+          description: Workout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workout"
+  /food/search:
+    get:
+      operationId: searchFood
+      tags: [food]
+      summary: Search Egyptian and regional foods
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 8
+      responses:
+        "200":
+          description: Matching foods
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Food"
+  /coach/message:
+    post:
+      operationId: sendCoachMessage
+      tags: [coach]
+      summary: Send a message to the nutrition coach
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoachMessageInput"
+      responses:
+        "200":
+          description: Coach response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachMessage"
+  /scanner/analyze:
+    post:
+      operationId: analyzeMealPhoto
+      tags: [coach]
+      summary: Analyze a meal photo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MealScanInput"
+      responses:
+        "200":
+          description: Estimated meal analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MealScan"
 components:
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    DateQuery:
+      name: date
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+    RangeQuery:
+      name: range
+      in: query
+      required: false
+      schema:
+        type: integer
+        enum: [7, 30, 90]
+        default: 30
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +340,219 @@ components:
           type: string
       required:
         - status
+    Profile:
+      type: object
+      required: [id, name, age, heightCm, weightKg, targetWeightKg, sex, activityLevel, goal, stepTarget, unitSystem, avatarInitials]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        age: { type: integer }
+        heightCm: { type: number }
+        weightKg: { type: number }
+        targetWeightKg: { type: number }
+        sex: { type: string, enum: [male, female] }
+        activityLevel: { type: string, enum: [sedentary, light, moderate, high] }
+        goal: { type: string, enum: [lose, build, maintain] }
+        stepTarget: { type: integer }
+        unitSystem: { type: string, enum: [metric, imperial] }
+        avatarInitials: { type: string }
+    ProfileUpdate:
+      type: object
+      required: [name, age, heightCm, weightKg, targetWeightKg, sex, activityLevel, goal, stepTarget, unitSystem]
+      properties:
+        name: { type: string, minLength: 1 }
+        age: { type: integer, minimum: 13, maximum: 100 }
+        heightCm: { type: number, minimum: 100, maximum: 240 }
+        weightKg: { type: number, minimum: 30, maximum: 300 }
+        targetWeightKg: { type: number, minimum: 30, maximum: 300 }
+        sex: { type: string, enum: [male, female] }
+        activityLevel: { type: string, enum: [sedentary, light, moderate, high] }
+        goal: { type: string, enum: [lose, build, maintain] }
+        stepTarget: { type: integer, minimum: 1000, maximum: 50000 }
+        unitSystem: { type: string, enum: [metric, imperial] }
+    Plan:
+      type: object
+      required: [version, calories, protein, carbs, fat, fiber, bmr, tdee, updatedAt, history]
+      properties:
+        version: { type: string }
+        calories: { type: integer }
+        protein: { type: integer }
+        carbs: { type: integer }
+        fat: { type: integer }
+        fiber: { type: integer }
+        bmr: { type: integer }
+        tdee: { type: integer }
+        updatedAt: { type: string, format: date-time }
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanHistory"
+    PlanHistory:
+      type: object
+      required: [version, reason, calories, createdAt]
+      properties:
+        version: { type: string }
+        reason: { type: string }
+        calories: { type: integer }
+        createdAt: { type: string, format: date-time }
+    PlanAdjustmentInput:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1 }
+        calories: { type: integer, minimum: 1000, maximum: 5000 }
+    Dashboard:
+      type: object
+      required: [date, calories, macros, waterMl, meals, workouts, streak]
+      properties:
+        date: { type: string, format: date }
+        calories:
+          $ref: "#/components/schemas/CalorieSummary"
+        macros:
+          $ref: "#/components/schemas/MacroSummary"
+        waterMl: { type: integer }
+        meals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Meal"
+        workouts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Workout"
+        streak: { type: integer }
+    CalorieSummary:
+      type: object
+      required: [target, consumed, burned, remaining]
+      properties:
+        target: { type: integer }
+        consumed: { type: integer }
+        burned: { type: integer }
+        remaining: { type: integer }
+    MacroSummary:
+      type: object
+      required: [protein, carbs, fat, fiber]
+      properties:
+        protein: { $ref: "#/components/schemas/MacroProgress" }
+        carbs: { $ref: "#/components/schemas/MacroProgress" }
+        fat: { $ref: "#/components/schemas/MacroProgress" }
+        fiber: { $ref: "#/components/schemas/MacroProgress" }
+    MacroProgress:
+      type: object
+      required: [current, target]
+      properties:
+        current: { type: integer }
+        target: { type: integer }
+    Meal:
+      type: object
+      required: [id, name, mealType, calories, protein, carbs, fat, fiber, portion, loggedAt, date]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        mealType: { type: string, enum: [breakfast, lunch, dinner, snack] }
+        calories: { type: integer }
+        protein: { type: integer }
+        carbs: { type: integer }
+        fat: { type: integer }
+        fiber: { type: integer }
+        portion: { type: string }
+        loggedAt: { type: string, format: date-time }
+        date: { type: string, format: date }
+    MealInput:
+      type: object
+      required: [name, mealType, calories, protein, carbs, fat, fiber, portion]
+      properties:
+        name: { type: string, minLength: 1 }
+        mealType: { type: string, enum: [breakfast, lunch, dinner, snack] }
+        calories: { type: integer, minimum: 0 }
+        protein: { type: integer, minimum: 0 }
+        carbs: { type: integer, minimum: 0 }
+        fat: { type: integer, minimum: 0 }
+        fiber: { type: integer, minimum: 0 }
+        portion: { type: string, minLength: 1 }
+        date: { type: string, format: date }
+    WeightEntry:
+      type: object
+      required: [id, weightKg, recordedAt, note]
+      properties:
+        id: { type: integer }
+        weightKg: { type: number }
+        recordedAt: { type: string, format: date }
+        note: { type: string }
+    WeightEntryInput:
+      type: object
+      required: [weightKg, recordedAt]
+      properties:
+        weightKg: { type: number, minimum: 30, maximum: 300 }
+        recordedAt: { type: string, format: date }
+        note: { type: string }
+    Workout:
+      type: object
+      required: [id, name, workoutType, durationMinutes, caloriesBurned, recordedAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        workoutType: { type: string, enum: [resistance, cardio, steps] }
+        durationMinutes: { type: integer }
+        caloriesBurned: { type: integer }
+        recordedAt: { type: string, format: date }
+    WorkoutInput:
+      type: object
+      required: [name, workoutType, durationMinutes, caloriesBurned, recordedAt]
+      properties:
+        name: { type: string, minLength: 1 }
+        workoutType: { type: string, enum: [resistance, cardio, steps] }
+        durationMinutes: { type: integer, minimum: 1 }
+        caloriesBurned: { type: integer, minimum: 0 }
+        recordedAt: { type: string, format: date }
+    Food:
+      type: object
+      required: [id, name, aliases, portion, calories, protein, carbs, fat, fiber, category]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        aliases:
+          type: array
+          items: { type: string }
+        portion: { type: string }
+        calories: { type: integer }
+        protein: { type: integer }
+        carbs: { type: integer }
+        fat: { type: integer }
+        fiber: { type: integer }
+        category: { type: string }
+    CoachMessageInput:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string, minLength: 1 }
+        context: { type: string }
+    CoachMessage:
+      type: object
+      required: [id, role, message, suggestions, createdAt]
+      properties:
+        id: { type: integer }
+        role: { type: string, enum: [assistant] }
+        message: { type: string }
+        suggestions:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+    MealScanInput:
+      type: object
+      required: [imageName]
+      properties:
+        imageName: { type: string }
+        mealType: { type: string, enum: [breakfast, lunch, dinner, snack] }
+    MealScan:
+      type: object
+      required: [mealName, portion, calories, protein, carbs, fat, fiber, confidence]
+      properties:
+        mealName: { type: string }
+        portion: { type: string }
+        calories: { type: integer }
+        protein: { type: integer }
+        carbs: { type: integer }
+        fat: { type: integer }
+        fiber: { type: integer }
+        confidence: { type: integer, minimum: 0, maximum: 100 }
 

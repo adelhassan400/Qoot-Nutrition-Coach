@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "قوت — Qoot Nutrition Coach"
+description = "An Arabic-first, mobile-first AI nutrition and fitness coach for Egyptian and Arab users, with meal logging, local food search, progress tracking, adaptive plans, and a conversational coach."
+version = "1.0.0"
+id = "artifacts/qoot"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20052
+
+[services.development]
+run = "pnpm --filter @workspace/qoot run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/qoot", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/qoot/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20052"
+BASE_PATH = "/"

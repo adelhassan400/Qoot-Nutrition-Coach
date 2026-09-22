@@ -1,0 +1,1 @@
+- [Qoot persistence boundary](qoot-persistence.md) — keep the first-user coach flow on PostgreSQL with deterministic service endpoints so AI providers can be swapped in later.

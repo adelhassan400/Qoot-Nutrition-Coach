@@ -1,6 +1,6 @@
-# [Project name]
+# قوت — Qoot Nutrition Coach
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Arabic-first nutrition and fitness coaching for Egyptian and Arab users.
 
 ## Run & Operate
 
@@ -22,23 +22,30 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/qoot/src/App.tsx` — main RTL mobile-first product shell and feature routes
+- `artifacts/qoot/src/index.css` — Qoot theme tokens, typography, and motion
+- `artifacts/api-server/src/routes/qoot.ts` — profile, plan, meal, progress, food, coach, and scanner endpoints
+- `lib/api-spec/openapi.yaml` — API source of truth
+- `lib/db/src/schema/qoot.ts` — persistent PostgreSQL schema
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The app uses a single local profile and persistent PostgreSQL tables for the first-user experience; account/auth scope is intentionally outside this build.
+- All client/server contracts are generated from the OpenAPI spec so the RTL UI and API share the same payload shapes.
+- Coach replies and meal scanning are deterministic local product flows for the first build; they are structured behind REST endpoints so a model or image service can replace them later.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Qoot includes an Arabic RTL dashboard, Egyptian food search and meal logging, yesterday repeat, water tracking, coach conversation, simulated meal photo analysis with editable macros, weight/workout progress, unit-aware profile editing, live Mifflin-St Jeor targets, and versioned plan history.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+The primary experience should remain Arabic RTL with natural Egyptian phrasing and a premium dark, emerald/teal/amber visual identity.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The Vite build requires workflow-provided `PORT` and `BASE_PATH`; use the managed web workflow for normal runs.
+- After changing `lib/api-spec/openapi.yaml`, run `pnpm --filter @workspace/api-spec run codegen` before using new hooks or Zod schemas.
 
 ## Pointers
 
