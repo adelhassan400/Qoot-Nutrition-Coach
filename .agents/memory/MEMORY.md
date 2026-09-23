@@ -1,1 +1,2 @@
 - [Qoot persistence boundary](qoot-persistence.md) — keep the first-user coach flow on PostgreSQL with deterministic service endpoints so AI providers can be swapped in later.
+- [Qoot localization](qoot-localization.md) — default to English, persist EN/AR, switch direction, and pass language into coach context.

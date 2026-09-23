@@ -470,38 +470,67 @@ router.post("/coach/message", async (req, res): Promise<void> => {
   const fat = meals.reduce((sum, meal) => sum + meal.fat, 0);
   const mealNames = meals.map((meal) => meal.name).join("، ") || "لسه مفيش وجبات";
   const context = parsed.data.context;
+  const language = context?.language ?? "ar";
   const contextProfile = context?.profile?.name ? context.profile : profile;
   const contextPlan = context?.plan?.calories ? context.plan : plan;
   const contextDashboard = context?.dashboard;
   const prompt = [
-    "أنت كوتش قوت، مساعد تغذية عالمي ودود وعملي وغير حُكمي. اكتشف لغة المستخدم ولهجته من رسالته ورد بنفسها: استخدم المصرية مع المصريين، وتكيّف طبيعيًا مع الشامية أو الخليجية، واستخدم فصحى مبسطة إذا كتب بها، ورد بالإنجليزية إذا كتب بالإنجليزية. لا تخلط اللهجات بلا سبب.",
-    "ابدأ بالإجابة عن رسالة المستخدم مباشرة ولا تكتفِ بتحية عامة. اجعل طول الإجابة مناسبًا للسؤال: الأسئلة البسيطة مثل (من أنت؟) تحصل على جملة قصيرة مؤثرة ومباشرة. قدّم تفاصيل منظمة فقط عند تحليل وجبة أو ماكروز أو تمرين أو خطة تغذية معقدة. لا تكتب مقالًا طويلًا إلا إذا طلب المستخدم ذلك صراحة.",
-    `اسم المستخدم: ${contextProfile.name}. الهدف: ${contextProfile.goal}. الوزن: ${contextProfile.weightKg} كجم إلى ${contextProfile.targetWeightKg} كجم.`,
-    `الخطة: ${contextPlan.calories} سعرة، ${contextPlan.protein} جم بروتين، ${contextPlan.carbs} جم كربوهيدرات، ${contextPlan.fat} جم دهون.`,
-    `اليوم: ${contextDashboard?.calories.consumed ?? consumed} سعرة مستهلكة، ${contextDashboard?.calories.remaining ?? remaining} سعرة متبقية، والوجبات: ${mealNames}.`,
-    `رسالة المستخدم: ${parsed.data.message}`,
+    language === "en"
+      ? "You are Qoot, a practical, supportive nutrition coach. Reply in clear English, answer directly, and keep the response proportionate to the question."
+      : "أنت كوتش قوت، مساعد تغذية مصري ودود وعملي وغير حُكمي. رد بالمصرية بشكل مباشر ومناسب لطول السؤال.",
+    `Name: ${contextProfile.name}. Goal: ${contextProfile.goal}. Weight: ${contextProfile.weightKg}kg to ${contextProfile.targetWeightKg}kg.`,
+    `Plan: ${contextPlan.calories} calories, ${contextPlan.protein}g protein, ${contextPlan.carbs}g carbs, ${contextPlan.fat}g fat.`,
+    `Today: ${contextDashboard?.calories.consumed ?? consumed} calories consumed, ${contextDashboard?.calories.remaining ?? remaining} remaining, meals: ${mealNames}.`,
+    `User message: ${parsed.data.message}`,
   ].join("\n");
-  const message = parsed.data.message.toLocaleLowerCase("ar");
-  let response = `عاش يا ${profile.name.split(" ")[0]}. أنا شايف يومك: اتاخد ${consumed} من ${plan.calories} سعرة، فاضلك ${remaining} سعرة. خلّي الوجبة الجاية فيها بروتين وخضار عشان تكمّل براحة.`;
-  let suggestions = ["أعمل إيه في العشا؟", "فاضلي كام؟", "إزاي أزوّد البروتين؟"];
-  if (message.includes("فاضل") || message.includes("باقي") || message.includes("سعر") || message.includes("ميزاني")) {
-    response = `فاضلك النهارده حوالي ${remaining} سعرة من هدف ${plan.calories}. أكلت ${consumed} سعرة، و${protein} جم بروتين من هدف ${plan.protein} جم.`;
-    suggestions = ["أعمل إيه في العشا؟", "وجبة بروتين اقتصادية", "أحتاج كام بروتين؟"];
-  } else if (message.includes("عشا") || message.includes("عشاء") || message.includes("وجبة")) {
+  const message = parsed.data.message.toLocaleLowerCase(language === "en" ? "en-US" : "ar");
+  let response = language === "en"
+    ? `Nice work, ${profile.name.split(" ")[0]}. You have had ${consumed} of ${plan.calories} calories, so ${remaining} remain. Make your next meal protein-forward with vegetables.`
+    : `عاش يا ${profile.name.split(" ")[0]}. اتاخد ${consumed} من ${plan.calories} سعرة، فاضلك ${remaining} سعرة. خلّي الوجبة الجاية فيها بروتين وخضار.`;
+  let suggestions = language === "en"
+    ? ["What should I have for dinner?", "How many calories do I have left?", "How can I add protein?"]
+    : ["أعمل إيه في العشا؟", "فاضلي كام؟", "إزاي أزوّد البروتين؟"];
+  const asksRemaining = language === "en"
+    ? message.includes("left") || message.includes("remaining") || message.includes("calorie") || message.includes("budget")
+    : message.includes("فاضل") || message.includes("باقي") || message.includes("سعر") || message.includes("ميزاني");
+  const asksDinner = language === "en"
+    ? message.includes("dinner") || message.includes("meal")
+    : message.includes("عشا") || message.includes("عشاء") || message.includes("وجبة");
+  const asksProtein = message.includes("protein") || message.includes("بروتين");
+  const asksGathering = language === "en"
+    ? message.includes("gathering") || message.includes("cheat")
+    : message.includes("عزوم") || message.includes("عزومة");
+  const asksWater = language === "en"
+    ? message.includes("water")
+    : message.includes("مياه") || message.includes("مية");
+  if (asksRemaining) {
+    response = language === "en"
+      ? `You have about ${remaining} calories left from your ${plan.calories}-calorie target. You have eaten ${consumed} calories and ${protein}g protein out of ${plan.protein}g.`
+      : `فاضلك النهارده حوالي ${remaining} سعرة من هدف ${plan.calories}. أكلت ${consumed} سعرة، و${protein} جم بروتين من هدف ${plan.protein} جم.`;
+    suggestions = language === "en" ? ["Dinner idea", "Budget-friendly protein", "How much protein do I need?"] : ["أعمل إيه في العشا؟", "وجبة بروتين اقتصادية", "أحتاج كام بروتين؟"];
+  } else if (asksDinner) {
     const dinnerCalories = Math.min(remaining, Math.max(350, Math.round(remaining * 0.45)));
     response = remaining > 0
-      ? `للعشا عندك مساحة حوالي ${dinnerCalories} سعرة. اختار 150 جم فراخ أو علبة تونة، طبق سلطة كبير، ونصف رغيف عيش بلدي. كده تزود البروتين من غير ما تتخطى ميزانيتك.`
-      : "أنت قفلت سعراتك تقريباً النهارده، فلو جعان اختار حاجة خفيفة زي زبادي لايت أو خضار، ومش محتاج تعاقب نفسك.";
-    suggestions = ["بديل نباتي للعشا", "قدّر لي عشا مصري", "أعمل إيه لو جعت بالليل؟"];
-  } else if (message.includes("بروتين") || message.includes("protein")) {
-    response = `هدفك ${plan.protein} جم بروتين، وأنت وصلت ${protein} جم لحد دلوقتي. جبنة قريش، بيض، فول، وعدس اختيارات مصرية اقتصادية؛ جبنة قريش بالطماطم تعطي حوالي 27 جم في 150 جم.`;
-    suggestions = ["سجّل جبنة قريش", "اعمل لي وجبة بفول", "أعمل إيه في العشا؟"];
-  } else if (message.includes("عزوم") || message.includes("عزومة") || message.includes("cheat")) {
-    response = `في العزومة خليك ذكي مش مثالي. عندك ${remaining} سعرة متبقية، فابدأ بالسلطة والبروتين، خُد حصة واحدة نشويات، وسيب مساحة للحلو. وجبة واحدة مش هتحدد نتيجتك.`;
-    suggestions = ["اختيارات ذكية في العزومة", "قدّر لي طبق كشري", "فاضلي كام؟"];
-  } else if (message.includes("مياه") || message.includes("مية") || message.includes("water")) {
-    response = "خلّي هدفك كباية 250 مل كل ساعتين تقريباً، وخصوصاً قبل الوجبة أو بعد التمرين. سجّلها أول بأول عشان نعرف يومك فعلاً.";
-    suggestions = ["أضف كباية مية", "سجّل تمرين", "ماكروز اليوم"];
+      ? language === "en"
+        ? `You have room for about ${dinnerCalories} calories at dinner. Try 150g chicken or tuna, a large salad, and half a baladi loaf for a filling protein-rich meal.`
+        : `للعشا عندك مساحة حوالي ${dinnerCalories} سعرة. اختار 150 جم فراخ أو علبة تونة، طبق سلطة كبير، ونصف رغيف عيش بلدي.`
+      : language === "en"
+        ? "You are close to your calorie target today. If you are hungry, choose something light like low-fat yogurt or vegetables—no need to punish yourself."
+        : "أنت قفلت سعراتك تقريباً النهارده، فلو جعان اختار زبادي لايت أو خضار، ومش محتاج تعاقب نفسك.";
+    suggestions = language === "en" ? ["Vegetarian dinner", "Estimate an Egyptian dinner", "What if I get hungry later?"] : ["بديل نباتي للعشا", "قدّر لي عشا مصري", "أعمل إيه لو جعت بالليل؟"];
+  } else if (asksProtein) {
+    response = language === "en"
+      ? `Your target is ${plan.protein}g protein and you have reached ${protein}g so far. Cottage cheese, eggs, beans, and lentils are affordable local options.`
+      : `هدفك ${plan.protein} جم بروتين، وأنت وصلت ${protein} جم لحد دلوقتي. جبنة قريش، بيض، فول، وعدس اختيارات مصرية اقتصادية.`;
+    suggestions = language === "en" ? ["Log cottage cheese", "Build a bean meal", "Dinner idea"] : ["سجّل جبنة قريش", "اعمل لي وجبة بفول", "أعمل إيه في العشا؟"];
+  } else if (asksGathering) {
+    response = language === "en"
+      ? `At a gathering, start with salad and protein, choose one serving of carbs, and leave room for dessert. You still have ${remaining} calories today.`
+      : `في العزومة ابدأ بالسلطة والبروتين، خُد حصة واحدة نشويات، وسيب مساحة للحلو. عندك ${remaining} سعرة متبقية.`;
+    suggestions = language === "en" ? ["Smart gathering choices", "Estimate koshari", "How many calories are left?"] : ["اختيارات ذكية في العزومة", "قدّر لي طبق كشري", "فاضلي كام؟"];
+  } else if (asksWater) {
+    response = language === "en" ? "Aim for a 250 ml glass every couple of hours, especially before a meal or after training. Logging it helps us see your real day." : "خلّي هدفك كباية 250 مل كل ساعتين تقريباً، وخصوصاً قبل الوجبة أو بعد التمرين. سجّلها عشان نعرف يومك فعلاً.";
+    suggestions = language === "en" ? ["Add a glass of water", "Log a workout", "Today's macros"] : ["أضف كباية مية", "سجّل تمرين", "ماكروز اليوم"];
   }
   const geminiResponse = await askGemini(prompt);
   if (geminiResponse) response = geminiResponse;

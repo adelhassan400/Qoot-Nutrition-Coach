@@ -8,6 +8,7 @@
 
 export * from './calorieSummary';
 export * from './coachContext';
+export * from './coachContextLanguage';
 export * from './coachMessage';
 export * from './coachMessageInput';
 export * from './coachMessageRole';

@@ -5,12 +5,14 @@
  * Qoot nutrition and fitness coach API
  * OpenAPI spec version: 0.1.0
  */
+import type { CoachContextLanguage } from './coachContextLanguage';
 import type { CoachTurn } from './coachTurn';
 import type { Dashboard } from './dashboard';
 import type { Plan } from './plan';
 import type { Profile } from './profile';
 
 export interface CoachContext {
+  language?: CoachContextLanguage;
   profile?: Profile;
   plan?: Plan;
   dashboard?: Dashboard;

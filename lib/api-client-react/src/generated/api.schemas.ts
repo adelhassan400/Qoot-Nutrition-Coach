@@ -309,6 +309,14 @@ export interface Food {
   category: string;
 }
 
+export type CoachContextLanguage = typeof CoachContextLanguage[keyof typeof CoachContextLanguage];
+
+
+export const CoachContextLanguage = {
+  en: 'en',
+  ar: 'ar',
+} as const;
+
 export type CoachTurnRole = typeof CoachTurnRole[keyof typeof CoachTurnRole];
 
 
@@ -323,6 +331,7 @@ export interface CoachTurn {
 }
 
 export interface CoachContext {
+  language?: CoachContextLanguage;
   profile?: Profile;
   plan?: Plan;
   dashboard?: Dashboard;

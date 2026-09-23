@@ -436,6 +436,7 @@ export const SearchFoodResponse = zod.array(SearchFoodResponseItem)
 export const SendCoachMessageBody = zod.object({
   "message": zod.string().min(1),
   "context": zod.object({
+  "language": zod.enum(['en', 'ar']).optional(),
   "profile": zod.object({
   "id": zod.number().int(),
   "name": zod.string(),

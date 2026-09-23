@@ -355,6 +355,8 @@
   background: hsl(var(--muted) / .62); color: hsl(var(--foreground)); outline: none;
   padding: .72rem .9rem; transition: border-color .2s, box-shadow .2s;
 }
+
+.qoot-label { margin-bottom: .375rem; display: block; font-size: .75rem; color: hsl(var(--muted-foreground)); }
 .qoot-input:focus { border-color: hsl(var(--primary)); box-shadow: 0 0 0 3px hsl(var(--primary) / .13); }
 .qoot-button { transition: transform .2s, background-color .2s, border-color .2s; }
 .qoot-button:active { transform: scale(.97); }
