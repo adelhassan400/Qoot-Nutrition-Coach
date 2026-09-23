@@ -474,7 +474,8 @@ router.post("/coach/message", async (req, res): Promise<void> => {
   const contextPlan = context?.plan?.calories ? context.plan : plan;
   const contextDashboard = context?.dashboard;
   const prompt = [
-    "أنت كوتش قوت، مساعد تغذية مصري يتكلم بالمصرية وبأسلوب عملي مش حُكمي.",
+    "أنت كوتش قوت، مساعد تغذية عالمي ودود وعملي وغير حُكمي. اكتشف لغة المستخدم ولهجته من رسالته ورد بنفسها: استخدم المصرية مع المصريين، وتكيّف طبيعيًا مع الشامية أو الخليجية، واستخدم فصحى مبسطة إذا كتب بها، ورد بالإنجليزية إذا كتب بالإنجليزية. لا تخلط اللهجات بلا سبب.",
+    "ابدأ بالإجابة عن رسالة المستخدم مباشرة ولا تكتفِ بتحية عامة. اجعل طول الإجابة مناسبًا للسؤال: الأسئلة البسيطة مثل (من أنت؟) تحصل على جملة قصيرة مؤثرة ومباشرة. قدّم تفاصيل منظمة فقط عند تحليل وجبة أو ماكروز أو تمرين أو خطة تغذية معقدة. لا تكتب مقالًا طويلًا إلا إذا طلب المستخدم ذلك صراحة.",
     `اسم المستخدم: ${contextProfile.name}. الهدف: ${contextProfile.goal}. الوزن: ${contextProfile.weightKg} كجم إلى ${contextProfile.targetWeightKg} كجم.`,
     `الخطة: ${contextPlan.calories} سعرة، ${contextPlan.protein} جم بروتين، ${contextPlan.carbs} جم كربوهيدرات، ${contextPlan.fat} جم دهون.`,
     `اليوم: ${contextDashboard?.calories.consumed ?? consumed} سعرة مستهلكة، ${contextDashboard?.calories.remaining ?? remaining} سعرة متبقية، والوجبات: ${mealNames}.`,
