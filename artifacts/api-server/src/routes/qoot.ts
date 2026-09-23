@@ -40,6 +40,24 @@ import {
 
 const router: IRouter = Router();
 
+router.post("/checkout/paymob", (req, res): void => {
+  const currency = req.body?.currency;
+  if (currency !== "EGP" && currency !== "USD") {
+    res.status(400).json({ error: "Currency must be EGP or USD" });
+    return;
+  }
+
+  // Keep the amount server-owned so a client cannot alter the charge.
+  const amountCents = currency === "EGP" ? 9900 : 200;
+  res.json({
+    provider: "paymob",
+    amount_cents: amountCents,
+    currency,
+    billing_period: "month",
+    status: "ready",
+  });
+});
+
 const today = () => new Date().toISOString().slice(0, 10);
 const dateKey = (date: Date) => date.toISOString().slice(0, 10);
 type GeminiResponse = {
@@ -228,12 +246,18 @@ const foods = [
 
 async function historyResponse() {
   const historyRows = await db.select().from(nutritionPlansTable).orderBy(desc(nutritionPlansTable.id));
-  return historyRows.map((item) => ({
-    version: item.version,
-    reason: item.reason,
-    calories: item.calories,
-    createdAt: item.updatedAt,
-  }));
+  return historyRows
+    .map((item) => ({
+      version: item.version,
+      reason: item.reason,
+      calories: item.calories,
+      createdAt: item.updatedAt,
+    }))
+    .filter((item, index, items) => items.findIndex((candidate) =>
+      candidate.version === item.version &&
+      candidate.reason === item.reason &&
+      candidate.createdAt.getTime() === item.createdAt.getTime()
+    ) === index);
 }
 
 router.get("/profile", async (_req, res): Promise<void> => {

@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { Link, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
 import {
   Activity, ArrowLeft, BarChart3, Bell, Camera, Check, ChevronLeft,
-  CircleHelp, Droplets, Flame, Footprints, Gauge, HeartPulse, History, Home, Loader2, MessageCircle,
+  CircleHelp, CreditCard, Droplets, Flame, Footprints, Gauge, HeartPulse, History, Home, Loader2, MessageCircle,
   Minus, MoreHorizontal, Pencil, Plus, RotateCcw, Search, Send, Settings2, Sparkles, Trash2,
   TrendingDown, UserRound, Utensils, Weight, X, Zap,
 } from 'lucide-react';
@@ -21,6 +21,7 @@ import NotFound from '@/pages/not-found';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
+import { createPaymobCheckoutPayload, getStoredCurrency, PRICING, type Currency } from './lib/pricing';
 import './index.css';
 
 const queryClient = new QueryClient();
@@ -31,6 +32,11 @@ const LanguageContext = createContext<{ language: Language; setLanguage: (langua
   setLanguage: () => undefined,
 });
 const useLanguage = () => useContext(LanguageContext);
+const CurrencyContext = createContext<{ currency: Currency; setCurrency: (currency: Currency) => void }>({
+  currency: 'EGP',
+  setCurrency: () => undefined,
+});
+const useCurrency = () => useContext(CurrencyContext);
 const useT = () => {
   const { language } = useLanguage();
   return (english: string, arabic: string) => language === 'en' ? english : arabic;
@@ -53,6 +59,13 @@ function Logo() {
 function LanguageSwitcher() {
   const { language, setLanguage } = useLanguage();
   return <button type="button" onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')} data-testid="button-language-switcher" className="qoot-button inline-flex h-10 items-center gap-1 rounded-xl border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary hover:border-primary/60"><span className={language === 'en' ? 'text-primary' : 'text-muted-foreground'}>EN</span><span className="text-muted-foreground">/</span><span className={language === 'ar' ? 'text-primary' : 'text-muted-foreground'}>AR</span></button>;
+}
+
+function CurrencySwitcher() {
+  const { currency, setCurrency } = useCurrency();
+  return <div className="inline-flex rounded-xl border border-primary/30 bg-primary/10 p-1" role="group" aria-label="Currency">
+    {(['EGP', 'USD'] as Currency[]).map((option) => <button key={option} type="button" onClick={() => setCurrency(option)} data-testid={`button-currency-${option.toLowerCase()}`} aria-pressed={currency === option} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${currency === option ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{option}</button>)}
+  </div>;
 }
 
 function navItems(t: (english: string, arabic: string) => string) {
@@ -91,7 +104,7 @@ function Shell({ children }: { children: ReactNode }) {
     </aside>
     <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between border-b border-border/70 bg-background/80 px-5 backdrop-blur-xl">
       <Logo />
-      <div className="flex items-center gap-2"><LanguageSwitcher /><IconButton label={t('Notifications', 'التنبيهات')} testId="button-notifications"><Bell className="h-5 w-5" /></IconButton></div>
+      <div className="flex items-center gap-2">{location === '/profile' && <><CurrencySwitcher /><Link href="/checkout" data-testid="link-checkout" className="qoot-button inline-flex h-10 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground"><CreditCard className="h-3.5 w-3.5" />{t('Qoot Plus', 'قوت بلس')}</Link></>}<LanguageSwitcher /><IconButton label={t('Notifications', 'التنبيهات')} testId="button-notifications"><Bell className="h-5 w-5" /></IconButton></div>
     </header>
     <main className={`min-h-[100dvh] pb-24 lg:pb-8 ${language === 'ar' ? 'lg:mr-[260px]' : 'lg:ml-[260px]'}`}>
       <div className="mx-auto max-w-[1400px] px-5 py-7 sm:px-8 lg:px-12 lg:py-10">{children}</div>
@@ -332,13 +345,57 @@ function ProfilePage() {
   return <div className="qoot-page-in space-y-8"><header className="flex items-end justify-between gap-4"><div><p className="mb-2 text-sm font-bold text-primary">مساحتك</p><h1 className="qoot-display text-4xl font-semibold">بياناتك، على مزاجك</h1><p className="mt-2 text-muted-foreground">كل ما نعرفك أكتر، خطتك تبقى أذكى.</p></div><button onClick={() => editing ? saveProfile() : beginEdit()} disabled={update.isPending} data-testid="button-edit-profile" className="qoot-button inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground">{editing ? (update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />) : <Pencil className="h-4 w-4" />}{editing ? 'حفظ التغييرات' : 'تعديل البيانات'}</button></header><div className="grid gap-6 lg:grid-cols-[.9fr_1.1fr]"><section className="qoot-card rounded-3xl p-6 sm:p-7"><div className="mb-7 flex items-center gap-4"><span className="grid h-16 w-16 place-items-center rounded-3xl bg-accent/15 text-xl font-bold text-accent">{profile.avatarInitials}</span><div><h2 className="qoot-display text-2xl">{profile.name}</h2><p className="mt-1 text-sm text-muted-foreground">عضو من فترة وبيتحسن كل يوم</p></div></div><div className="grid gap-4 sm:grid-cols-2">{[['name', 'الاسم', profile.name], ['age', 'السن', profile.age], ['heightCm', 'الطول بالسنتي', profile.heightCm], ['weightKg', 'الوزن الحالي', profile.weightKg], ['targetWeightKg', 'الوزن المستهدف', profile.targetWeightKg], ['stepTarget', 'هدف الخطوات', profile.stepTarget]].map(([key, label, value]) => <label key={key as string} className="block"><span className="mb-1.5 block text-xs text-muted-foreground">{label as string}</span><input disabled={!editing} value={String(form[key as keyof Profile] ?? value)} onChange={(e) => field(key as keyof Profile, key === 'name' ? e.target.value : Number(e.target.value))} data-testid={`input-profile-${key}`} className={`qoot-input ${!editing ? 'cursor-default border-transparent bg-secondary/50' : ''}`} /></label>)}</div><div className="mt-5 grid gap-4 sm:grid-cols-2"><label><span className="mb-1.5 block text-xs text-muted-foreground">الهدف</span><select disabled={!editing} value={form.goal ?? profile.goal} onChange={(e) => field('goal', e.target.value)} data-testid="select-profile-goal" className="qoot-input"><option value="lose">أخسّس</option><option value="maintain">أحافظ</option><option value="build">أبني عضل</option></select></label><label><span className="mb-1.5 block text-xs text-muted-foreground">النشاط اليومي</span><select disabled={!editing} value={form.activityLevel ?? profile.activityLevel} onChange={(e) => field('activityLevel', e.target.value)} data-testid="select-profile-activity" className="qoot-input"><option value="sedentary">قليل الحركة</option><option value="light">خفيف</option><option value="moderate">متوسط</option><option value="high">عالي</option></select></label></div></section><section className="space-y-6"><div className="qoot-card rounded-3xl p-6"><div className="mb-5 flex items-start justify-between"><div><p className="text-xs font-bold text-primary">الخطة الحالية · {plan?.version ?? '—'}</p><h2 className="qoot-display mt-1 text-3xl">{number(plan?.calories ?? 0)} <span className="text-sm font-normal text-muted-foreground">سعرة يومياً</span></h2></div><Gauge className="h-7 w-7 text-accent" /></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-4"><div className="rounded-2xl bg-secondary/60 p-3"><span className="text-xs text-muted-foreground">بروتين</span><b className="mt-1 block">{number(plan?.protein)} جم</b></div><div className="rounded-2xl bg-secondary/60 p-3"><span className="text-xs text-muted-foreground">كربوهيدرات</span><b className="mt-1 block">{number(plan?.carbs)} جم</b></div><div className="rounded-2xl bg-secondary/60 p-3"><span className="text-xs text-muted-foreground">دهون</span><b className="mt-1 block">{number(plan?.fat)} جم</b></div><div className="rounded-2xl bg-secondary/60 p-3"><span className="text-xs text-muted-foreground">ألياف</span><b className="mt-1 block">{number(plan?.fiber)} جم</b></div></div><div className="mt-6 border-t border-border/70 pt-5"><p className="mb-3 text-sm font-semibold">حاسس إن الخطة محتاجة تتظبط؟</p><div className="flex gap-2"><input value={planReason} onChange={(e) => setPlanReason(e.target.value)} data-testid="input-plan-reason" className="qoot-input" placeholder="قولنا إيه اللي اتغيّر..." /><button onClick={adjustPlan} disabled={!planReason || adjust.isPending} data-testid="button-adjust-plan" className="qoot-button shrink-0 rounded-xl bg-accent px-4 font-bold text-accent-foreground disabled:opacity-40">{adjust.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'عدّلها'}</button></div></div></div><div className="qoot-card rounded-3xl p-6"><div className="mb-4 flex items-center gap-2"><History className="h-5 w-5 text-primary" /><h2 className="qoot-display text-xl">تاريخ خططك</h2></div>{!plan?.history?.length ? <p className="py-4 text-sm text-muted-foreground">أول خطة ليك لسه — ونبدأ منها.</p> : <div className="space-y-2">{plan.history.map((item) => <div key={`${item.version}-${item.createdAt}`} className="flex items-center justify-between rounded-xl bg-secondary/50 px-3 py-2.5 text-sm"><span>{item.reason}</span><span className="font-bold text-primary">{number(item.calories)}</span></div>)}</div>}</div></section></div></div>;
 }
 
+function CheckoutPage() {
+  const { currency } = useCurrency();
+  const t = useT();
+  const option = PRICING[currency];
+  const [isPreparing, setIsPreparing] = useState(false);
+  const [prepared, setPrepared] = useState<{ amount_cents: number; currency: Currency } | null>(null);
+
+  useEffect(() => {
+    setPrepared(null);
+  }, [currency]);
+
+  const startPaymobCheckout = async () => {
+    setIsPreparing(true);
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL.replace(/\/$/, '')}/api/checkout/paymob`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createPaymobCheckoutPayload(currency)),
+      });
+      if (!response.ok) throw new Error('Paymob checkout could not be prepared');
+      const data = await response.json() as { amount_cents: number; currency: Currency };
+      setPrepared(data);
+      toast.success(t('Paymob checkout is ready', 'الدفع عن طريق Paymob جاهز'));
+    } catch {
+      toast.error(t('We could not prepare checkout yet', 'مش قادرين نجهّز الدفع دلوقتي'));
+    } finally {
+      setIsPreparing(false);
+    }
+  };
+
+  return <div className="qoot-page-in mx-auto max-w-3xl space-y-7">
+    <header className="flex items-start justify-between gap-4">
+      <div><Link href="/profile" className="mb-4 inline-flex items-center gap-1 text-sm font-bold text-primary"><ArrowLeft className="h-4 w-4" />{t('Back to profile', 'رجوع لحسابك')}</Link><p className="mb-2 text-sm font-bold text-primary">{t('Qoot Plus', 'قوت بلس')}</p><h1 className="qoot-display text-4xl font-semibold">{t('A simpler way to stay on track', 'خليك ماشي على الخطة بسهولة')}</h1><p className="mt-2 text-muted-foreground">{t('Your nutrition plan, coach, and progress in one focused space.', 'خطتك وكوتشك وتقدّمك في مساحة واحدة.')}</p></div>
+      <CurrencySwitcher />
+    </header>
+    <section className="qoot-card overflow-hidden rounded-3xl p-6 sm:p-8">
+      <div className="mb-8 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-primary">{t('Monthly membership', 'العضوية الشهرية')}</p><h2 className="qoot-display mt-2 text-3xl">{option.display}</h2><p className="mt-2 text-sm text-muted-foreground">{t('Cancel anytime. No hidden fees.', 'تقدر تلغي في أي وقت. من غير مصاريف مخفية.')}</p></div><span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/15 text-primary"><CreditCard className="h-6 w-6" /></span></div>
+      <div className="space-y-3 border-y border-border/70 py-5 text-sm"><div className="flex items-center justify-between"><span className="text-muted-foreground">{t('Selected currency', 'العملة المختارة')}</span><b>{currency}</b></div><div className="flex items-center justify-between"><span className="text-muted-foreground">{t('Paymob amount', 'قيمة Paymob')}</span><b data-testid="checkout-paymob-amount">{option.amountCents.toLocaleString('en-US')} {t('cents', 'قرش')}</b></div><div className="flex items-center justify-between"><span className="text-muted-foreground">{t('Billing', 'الفترة')}</span><b>{t('Monthly', 'شهري')}</b></div></div>
+      <button onClick={startPaymobCheckout} disabled={isPreparing} data-testid="button-paymob-checkout" className="qoot-button mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 font-bold text-primary-foreground disabled:opacity-60">{isPreparing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}{isPreparing ? t('Preparing...', 'بنجهّز...') : t(`Continue with Paymob · ${option.display}`, `كمّل مع Paymob · ${option.display}`)}</button>
+      {prepared && <div data-testid="paymob-checkout-payload" className="mt-4 rounded-2xl border border-primary/25 bg-primary/10 p-4 text-sm"><p className="font-bold text-primary">{t('Paymob mapping confirmed', 'تم تأكيد ربط Paymob')}</p><p className="mt-1 text-muted-foreground">{prepared.amount_cents.toLocaleString('en-US')} cents · {prepared.currency} · {t('monthly', 'شهري')}</p></div>}
+    </section>
+  </div>;
+}
+
 function AppRouter() {
   const [location] = useLocation();
   const profileQ = useGetProfile();
   if (profileQ.isLoading) return <Shell><div className="space-y-5"><Skeleton className="h-28" /><Skeleton className="h-80" /></div></Shell>;
   if (profileQ.isError) return <Shell><PageState error retry={() => profileQ.refetch()} /></Shell>;
   if (!profileQ.data?.onboardingCompleted) return <Shell><OnboardingPage profile={profileQ.data} /></Shell>;
-  return <ErrorBoundary resetKey={location}><Shell><Switch><Route path="/" component={DashboardPage} /><Route path="/coach" component={CoachPage} /><Route path="/scan" component={ScanPage} /><Route path="/progress" component={ProgressPage} /><Route path="/profile" component={ProfilePage} /><Route component={NotFound} /></Switch></Shell></ErrorBoundary>;
+  return <ErrorBoundary resetKey={location}><Shell><Switch><Route path="/" component={DashboardPage} /><Route path="/coach" component={CoachPage} /><Route path="/scan" component={ScanPage} /><Route path="/progress" component={ProgressPage} /><Route path="/profile" component={ProfilePage} /><Route path="/checkout" component={CheckoutPage} /><Route component={NotFound} /></Switch></Shell></ErrorBoundary>;
 }
 
 function App() {
@@ -346,12 +403,16 @@ function App() {
     if (typeof window === 'undefined') return 'en';
     return window.localStorage.getItem('qoot-language') === 'ar' ? 'ar' : 'en';
   });
+  const [currency, setCurrency] = useState<Currency>(getStoredCurrency);
   useEffect(() => {
     window.localStorage.setItem('qoot-language', language);
     document.documentElement.lang = language;
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
   }, [language]);
-  return <LanguageContext.Provider value={{ language, setLanguage }}><QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><AppRouter /></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider></LanguageContext.Provider>;
+  useEffect(() => {
+    window.localStorage.setItem('qoot-currency', currency);
+  }, [currency]);
+  return <LanguageContext.Provider value={{ language, setLanguage }}><CurrencyContext.Provider value={{ currency, setCurrency }}><QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><AppRouter /></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider></CurrencyContext.Provider></LanguageContext.Provider>;
 }
 
 export default App;
