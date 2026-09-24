@@ -67,6 +67,13 @@ type PaymobAuthResponse = { token: string };
 type PaymobOrderResponse = { id: number };
 type PaymobPaymentKeyResponse = { token: string };
 
+function detectCoachLanguage(input: string, preferredLanguage: "en" | "ar" = "en"): "en" | "ar" {
+  const arabicLetters = (input.match(/[\u0600-\u06ff]/g) ?? []).length;
+  const latinLetters = (input.match(/[A-Za-z]/g) ?? []).length;
+  if (arabicLetters === 0 && latinLetters === 0) return preferredLanguage;
+  return arabicLetters >= latinLetters ? "ar" : "en";
+}
+
 async function paymobRequest<T>(config: PaymobConfig, path: string, body: unknown): Promise<T> {
   const response = await fetch(`${config.baseUrl}${path}`, {
     method: "POST",
@@ -589,14 +596,16 @@ router.post("/coach/message", async (req, res): Promise<void> => {
   const fat = meals.reduce((sum, meal) => sum + meal.fat, 0);
   const mealNames = meals.map((meal) => meal.name).join("، ") || "لسه مفيش وجبات";
   const context = parsed.data.context;
-  const language = context?.language ?? "ar";
+  const uiLanguage = context?.language ?? "en";
+  const language = detectCoachLanguage(parsed.data.message, uiLanguage);
   const contextProfile = context?.profile?.name ? context.profile : profile;
   const contextPlan = context?.plan?.calories ? context.plan : plan;
   const contextDashboard = context?.dashboard;
   const prompt = [
     language === "en"
-      ? "You are Qoot, a practical, supportive nutrition coach. Reply in clear English, answer directly, and keep the response proportionate to the question."
-      : "أنت كوتش قوت، مساعد تغذية مصري ودود وعملي وغير حُكمي. رد بالمصرية بشكل مباشر ومناسب لطول السؤال.",
+      ? "You are Qoot, a practical, supportive nutrition coach. Analyze the user's actual message and answer that question directly. Reply in the detected language of the user's message (English here), regardless of the app UI language. Use today's data when relevant, avoid canned greetings or unrelated default advice, and keep the response proportionate to the question."
+      : "أنت كوتش قوت، مساعد تغذية مصري ودود وعملي وغير حُكمي. حلّل رسالة المستخدم نفسها ورد على السؤال مباشرة. رد باللغة واللهجة الظاهرة في رسالة المستخدم (العربية هنا) بغض النظر عن لغة واجهة التطبيق. استخدم بيانات النهارده لما تكون مرتبطة بالسؤال، وما تستخدمش تحية محفوظة أو نصيحة عامة مالهاش علاقة بالسؤال، وخلي طول الرد على قد السؤال.",
+    `UI language (interface context only; never override the user's message): ${uiLanguage}. Detected message language: ${language}.`,
     `Name: ${contextProfile.name}. Goal: ${contextProfile.goal}. Weight: ${contextProfile.weightKg}kg to ${contextProfile.targetWeightKg}kg.`,
     `Plan: ${contextPlan.calories} calories, ${contextPlan.protein}g protein, ${contextPlan.carbs}g carbs, ${contextPlan.fat}g fat.`,
     `Today: ${contextDashboard?.calories.consumed ?? consumed} calories consumed, ${contextDashboard?.calories.remaining ?? remaining} remaining, meals: ${mealNames}.`,
@@ -609,6 +618,8 @@ router.post("/coach/message", async (req, res): Promise<void> => {
   let suggestions = language === "en"
     ? ["What should I have for dinner?", "How many calories do I have left?", "How can I add protein?"]
     : ["أعمل إيه في العشا؟", "فاضلي كام؟", "إزاي أزوّد البروتين؟"];
+  const asksIdentity = /\b(who are you|what are you|introduce yourself)\b/i.test(parsed.data.message) || /مين إنت|من انت|من أنت|إنت مين/.test(parsed.data.message);
+  const asksGreeting = /^(hi|hello|hey|good morning|good evening)[!.\s]*$/i.test(parsed.data.message.trim()) || /^(اهلا|أهلا|مرحبا|هاي|السلام عليكم)[!.\s]*$/i.test(parsed.data.message.trim());
   const asksRemaining = language === "en"
     ? message.includes("left") || message.includes("remaining") || message.includes("calorie") || message.includes("budget")
     : message.includes("فاضل") || message.includes("باقي") || message.includes("سعر") || message.includes("ميزاني");
@@ -622,7 +633,17 @@ router.post("/coach/message", async (req, res): Promise<void> => {
   const asksWater = language === "en"
     ? message.includes("water")
     : message.includes("مياه") || message.includes("مية");
-  if (asksRemaining) {
+  if (asksIdentity) {
+    response = language === "en"
+      ? "I’m Coach Qoot, your friendly nutrition assistant."
+      : "أنا كوتش قوت، مساعدك الشخصي للتغذية، وهساعدك تاخد قرارات أكل أذكى من غير تعقيد.";
+    suggestions = language === "en" ? ["What should I eat today?", "How many calories are left?", "How can I add protein?"] : ["أكل إيه النهارده؟", "فاضلي كام؟", "إزاي أزوّد البروتين؟"];
+  } else if (asksGreeting) {
+    response = language === "en"
+      ? `Hi ${profile.name.split(" ")[0]}—what nutrition question can I help you with today?`
+      : `أهلاً يا ${profile.name.split(" ")[0]}—تحب تسألني عن أكلك أو تمرينك النهارده؟`;
+    suggestions = language === "en" ? ["What should I have for dinner?", "How many calories are left?", "How can I add protein?"] : ["أعمل إيه في العشا؟", "فاضلي كام؟", "إزاي أزوّد البروتين؟"];
+  } else if (asksRemaining) {
     response = language === "en"
       ? `You have about ${remaining} calories left from your ${plan.calories}-calorie target. You have eaten ${consumed} calories and ${protein}g protein out of ${plan.protein}g.`
       : `فاضلك النهارده حوالي ${remaining} سعرة من هدف ${plan.calories}. أكلت ${consumed} سعرة، و${protein} جم بروتين من هدف ${plan.protein} جم.`;
