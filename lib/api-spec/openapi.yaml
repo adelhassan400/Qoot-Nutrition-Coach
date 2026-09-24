@@ -36,6 +36,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /checkout/paymob:
+    post:
+      operationId: preparePaymobCheckout
+      tags: [payments]
+      summary: Prepare a Paymob checkout redirect
+      description: Uses server-owned pricing. Returns a dry-run payload until Paymob credentials are configured and dry-run is disabled.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymobCheckoutInput"
+      responses:
+        "200":
+          description: Checkout prepared or safely available in test mode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymobCheckoutResponse"
+        "400":
+          description: Invalid currency
+        "502":
+          description: Paymob could not prepare the checkout
   /profile:
     get:
       operationId: getProfile
@@ -577,4 +600,21 @@ components:
         fat: { type: integer }
         fiber: { type: integer }
         confidence: { type: integer, minimum: 0, maximum: 100 }
-
+    PaymobCheckoutInput:
+      type: object
+      required: [currency]
+      properties:
+        currency: { type: string, enum: [EGP, USD] }
+    PaymobCheckoutResponse:
+      type: object
+      required: [provider, amount_cents, currency, billing_period, mode, status]
+      properties:
+        provider: { type: string, enum: [paymob] }
+        amount_cents: { type: integer }
+        currency: { type: string, enum: [EGP, USD] }
+        billing_period: { type: string, enum: [month] }
+        mode: { type: string, enum: [sandbox, live] }
+        status: { type: string, enum: [test_ready, ready] }
+        checkout_url: { type: string, nullable: true }
+        order_id: { type: integer }
+        message: { type: string }

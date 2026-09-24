@@ -365,8 +365,12 @@ function CheckoutPage() {
         body: JSON.stringify(createPaymobCheckoutPayload(currency)),
       });
       if (!response.ok) throw new Error('Paymob checkout could not be prepared');
-      const data = await response.json() as { amount_cents: number; currency: Currency };
+      const data = await response.json() as { amount_cents: number; currency: Currency; mode?: 'sandbox' | 'live'; status?: string; checkout_url?: string | null; message?: string };
       setPrepared(data);
+      if (data.checkout_url) {
+        window.location.assign(data.checkout_url);
+        return;
+      }
       toast.success(t('Paymob checkout is ready', 'الدفع عن طريق Paymob جاهز'));
     } catch {
       toast.error(t('We could not prepare checkout yet', 'مش قادرين نجهّز الدفع دلوقتي'));
@@ -384,7 +388,7 @@ function CheckoutPage() {
       <div className="mb-8 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-primary">{t('Monthly membership', 'العضوية الشهرية')}</p><h2 className="qoot-display mt-2 text-3xl">{option.display}</h2><p className="mt-2 text-sm text-muted-foreground">{t('Cancel anytime. No hidden fees.', 'تقدر تلغي في أي وقت. من غير مصاريف مخفية.')}</p></div><span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/15 text-primary"><CreditCard className="h-6 w-6" /></span></div>
       <div className="space-y-3 border-y border-border/70 py-5 text-sm"><div className="flex items-center justify-between"><span className="text-muted-foreground">{t('Selected currency', 'العملة المختارة')}</span><b>{currency}</b></div><div className="flex items-center justify-between"><span className="text-muted-foreground">{t('Paymob amount', 'قيمة Paymob')}</span><b data-testid="checkout-paymob-amount">{option.amountCents.toLocaleString('en-US')} {t('cents', 'قرش')}</b></div><div className="flex items-center justify-between"><span className="text-muted-foreground">{t('Billing', 'الفترة')}</span><b>{t('Monthly', 'شهري')}</b></div></div>
       <button onClick={startPaymobCheckout} disabled={isPreparing} data-testid="button-paymob-checkout" className="qoot-button mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 font-bold text-primary-foreground disabled:opacity-60">{isPreparing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}{isPreparing ? t('Preparing...', 'بنجهّز...') : t(`Continue with Paymob · ${option.display}`, `كمّل مع Paymob · ${option.display}`)}</button>
-      {prepared && <div data-testid="paymob-checkout-payload" className="mt-4 rounded-2xl border border-primary/25 bg-primary/10 p-4 text-sm"><p className="font-bold text-primary">{t('Paymob mapping confirmed', 'تم تأكيد ربط Paymob')}</p><p className="mt-1 text-muted-foreground">{prepared.amount_cents.toLocaleString('en-US')} cents · {prepared.currency} · {t('monthly', 'شهري')}</p></div>}
+      {prepared && <div data-testid="paymob-checkout-payload" className="mt-4 rounded-2xl border border-primary/25 bg-primary/10 p-4 text-sm"><p className="font-bold text-primary">{prepared.status === 'test_ready' ? t('Paymob test mode is ready', 'وضع اختبار Paymob جاهز') : t('Paymob checkout is ready', 'الدفع عن طريق Paymob جاهز')}</p><p className="mt-1 text-muted-foreground">{prepared.amount_cents.toLocaleString('en-US')} cents · {prepared.currency} · {prepared.mode ?? 'sandbox'} · {t('monthly', 'شهري')}</p>{prepared.message && <p className="mt-2 text-xs text-muted-foreground">{prepared.message}</p>}</div>}
     </section>
   </div>;
 }

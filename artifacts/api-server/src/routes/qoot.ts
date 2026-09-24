@@ -39,8 +39,48 @@ import {
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+type PaymobCurrency = "EGP" | "USD";
 
-router.post("/checkout/paymob", (req, res): void => {
+type PaymobConfig = {
+  apiKey: string;
+  integrationId: number;
+  iframeId: number;
+  mode: "sandbox" | "live";
+  dryRun: boolean;
+  baseUrl: string;
+};
+
+function getPaymobConfig(): PaymobConfig {
+  const mode = process.env.PAYMOB_MODE === "live" ? "live" : "sandbox";
+  const dryRun = process.env.PAYMOB_DRY_RUN !== "false";
+  return {
+    apiKey: process.env.PAYMOB_API_KEY?.trim() ?? "",
+    integrationId: Number(process.env.PAYMOB_INTEGRATION_ID ?? 0),
+    iframeId: Number(process.env.PAYMOB_IFRAME_ID ?? 0),
+    mode,
+    dryRun,
+    baseUrl: process.env.PAYMOB_BASE_URL?.trim() || "https://accept.paymob.com/api",
+  };
+}
+
+type PaymobAuthResponse = { token: string };
+type PaymobOrderResponse = { id: number };
+type PaymobPaymentKeyResponse = { token: string };
+
+async function paymobRequest<T>(config: PaymobConfig, path: string, body: unknown): Promise<T> {
+  const response = await fetch(`${config.baseUrl}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(`Paymob ${path} failed (${response.status}): ${details.slice(0, 240)}`);
+  }
+  return (await response.json()) as T;
+}
+
+router.post("/checkout/paymob", async (req, res): Promise<void> => {
   const currency = req.body?.currency;
   if (currency !== "EGP" && currency !== "USD") {
     res.status(400).json({ error: "Currency must be EGP or USD" });
@@ -49,13 +89,68 @@ router.post("/checkout/paymob", (req, res): void => {
 
   // Keep the amount server-owned so a client cannot alter the charge.
   const amountCents = currency === "EGP" ? 9900 : 200;
-  res.json({
-    provider: "paymob",
-    amount_cents: amountCents,
-    currency,
-    billing_period: "month",
-    status: "ready",
-  });
+  const config = getPaymobConfig();
+  const missingCredentials = !config.apiKey || !config.integrationId || !config.iframeId;
+  if (config.dryRun || missingCredentials) {
+    res.json({
+      provider: "paymob",
+      amount_cents: amountCents,
+      currency: currency as PaymobCurrency,
+      billing_period: "month",
+      mode: config.mode,
+      status: "test_ready",
+      checkout_url: null,
+      message: missingCredentials ? "Add Paymob credentials to enable a real checkout redirect." : "Dry-run enabled; no payment request was sent.",
+    });
+    return;
+  }
+
+  try {
+    const auth = await paymobRequest<PaymobAuthResponse>(config, "/auth/tokens", { api_key: config.apiKey });
+    const order = await paymobRequest<PaymobOrderResponse>(config, "/ecommerce/orders", {
+      auth_token: auth.token,
+      delivery_needed: false,
+      amount_cents: amountCents,
+      currency,
+      items: [],
+    });
+    const paymentKey = await paymobRequest<PaymobPaymentKeyResponse>(config, "/acceptance/payment_keys", {
+      auth_token: auth.token,
+      amount_cents: amountCents,
+      expiration: 3600,
+      order_id: order.id,
+      billing_data: {
+        apartment: "NA",
+        email: "customer@example.com",
+        floor: "NA",
+        first_name: "Qoot",
+        street: "NA",
+        building: "NA",
+        phone_number: "+201000000000",
+        shipping_method: "NA",
+        postal_code: "NA",
+        city: "Cairo",
+        country: "EG",
+        last_name: "Customer",
+        state: "Cairo",
+      },
+      currency,
+      integration_id: config.integrationId,
+    });
+    res.json({
+      provider: "paymob",
+      amount_cents: amountCents,
+      currency: currency as PaymobCurrency,
+      billing_period: "month",
+      mode: config.mode,
+      status: "ready",
+      order_id: order.id,
+      checkout_url: `${config.baseUrl}/acceptance/iframes/${config.iframeId}?payment_token=${encodeURIComponent(paymentKey.token)}`,
+    });
+  } catch (error) {
+    console.error("Paymob checkout preparation failed", error instanceof Error ? error.message : error);
+    res.status(502).json({ error: "Paymob checkout could not be prepared" });
+  }
 });
 
 const today = () => new Date().toISOString().slice(0, 10);
