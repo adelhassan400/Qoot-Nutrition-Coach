@@ -26,6 +26,8 @@ export const profilesTable = pgTable("qoot_profiles", {
   unitSystem: text("unit_system").notNull(),
   avatarInitials: text("avatar_initials").notNull(),
   onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
+  trialStartedAt: timestamp("trial_started_at", { withTimezone: true }),
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
 });
 
 export const nutritionPlansTable = pgTable("qoot_nutrition_plans", {

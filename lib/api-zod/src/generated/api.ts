@@ -33,7 +33,12 @@ export const GetProfileResponse = zod.object({
   "stepTarget": zod.number().int(),
   "unitSystem": zod.enum(['metric', 'imperial']),
   "avatarInitials": zod.string(),
-  "onboardingCompleted": zod.boolean()
+  "onboardingCompleted": zod.boolean(),
+  "trialStartedAt": zod.string().nullable(),
+  "trialEndsAt": zod.string().nullable(),
+  "trialStatus": zod.enum(['not_started', 'active', 'expired']),
+  "trialDaysRemaining": zod.number().int(),
+  "premiumAccess": zod.boolean()
 })
 
 
@@ -84,7 +89,12 @@ export const UpdateProfileResponse = zod.object({
   "stepTarget": zod.number().int(),
   "unitSystem": zod.enum(['metric', 'imperial']),
   "avatarInitials": zod.string(),
-  "onboardingCompleted": zod.boolean()
+  "onboardingCompleted": zod.boolean(),
+  "trialStartedAt": zod.string().nullable(),
+  "trialEndsAt": zod.string().nullable(),
+  "trialStatus": zod.enum(['not_started', 'active', 'expired']),
+  "trialDaysRemaining": zod.number().int(),
+  "premiumAccess": zod.boolean()
 })
 
 

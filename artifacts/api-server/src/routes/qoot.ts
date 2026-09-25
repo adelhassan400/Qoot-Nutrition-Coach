@@ -239,7 +239,31 @@ function calculatePlan(profile: Pick<typeof profilesTable.$inferSelect, "age" | 
 }
 
 function profileResponse(profile: typeof profilesTable.$inferSelect) {
-  return GetProfileResponse.parse(profile);
+  const now = Date.now();
+  const trialEndsAt = profile.trialEndsAt?.getTime() ?? 0;
+  const trialActive = Boolean(profile.trialStartedAt && trialEndsAt > now);
+  const trialDaysRemaining = trialActive
+    ? Math.max(1, Math.ceil((trialEndsAt - now) / 86_400_000))
+    : 0;
+  return GetProfileResponse.parse({
+    ...profile,
+    trialStartedAt: profile.trialStartedAt?.toISOString() ?? null,
+    trialEndsAt: profile.trialEndsAt?.toISOString() ?? null,
+    trialStatus: trialActive ? "active" : profile.trialStartedAt ? "expired" : "not_started",
+    trialDaysRemaining,
+    premiumAccess: trialActive,
+  });
+}
+
+async function activateTrialIfNeeded(profile: typeof profilesTable.$inferSelect) {
+  if (!profile.onboardingCompleted || profile.trialStartedAt) return profile;
+  const trialStartedAt = new Date();
+  const trialEndsAt = new Date(trialStartedAt.getTime() + 7 * 86_400_000);
+  const [updated] = await db.update(profilesTable)
+    .set({ trialStartedAt, trialEndsAt })
+    .where(eq(profilesTable.id, profile.id))
+    .returning();
+  return updated ?? profile;
 }
 
 function mealResponse(meal: typeof mealsTable.$inferSelect) {
@@ -364,7 +388,7 @@ async function historyResponse() {
 
 router.get("/profile", async (_req, res): Promise<void> => {
   await ensureSeeded();
-  res.json(profileResponse(await currentProfile()));
+  res.json(profileResponse(await activateTrialIfNeeded(await currentProfile())));
 });
 
 router.put("/profile", async (req, res): Promise<void> => {
@@ -376,9 +400,11 @@ router.put("/profile", async (req, res): Promise<void> => {
   }
   const profile = await currentProfile();
   const initials = parsed.data.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("");
+  const trialStartedAt = profile.trialStartedAt ?? new Date();
+  const trialEndsAt = profile.trialEndsAt ?? new Date(trialStartedAt.getTime() + 7 * 86_400_000);
   const [updated] = await db
     .update(profilesTable)
-    .set({ ...parsed.data, avatarInitials: initials, onboardingCompleted: true })
+    .set({ ...parsed.data, avatarInitials: initials, onboardingCompleted: true, trialStartedAt, trialEndsAt })
     .where(eq(profilesTable.id, profile.id))
     .returning();
   const targets = calculatePlan(updated);
@@ -389,7 +415,7 @@ router.put("/profile", async (req, res): Promise<void> => {
     version: `v${versionNumber}`,
     reason: "تحديث البيانات وحساب الخطة تلقائياً",
   });
-  res.json(UpdateProfileResponse.parse(updated));
+  res.json(profileResponse(updated));
 });
 
 router.get("/plan", async (_req, res): Promise<void> => {

@@ -58,6 +58,11 @@ export interface Profile {
   unitSystem: ProfileUnitSystem;
   avatarInitials: string;
   onboardingCompleted: boolean;
+  trialStartedAt: string | null;
+  trialEndsAt: string | null;
+  trialStatus: 'not_started' | 'active' | 'expired';
+  trialDaysRemaining: number;
+  premiumAccess: boolean;
 }
 
 export type ProfileUpdateSex = typeof ProfileUpdateSex[keyof typeof ProfileUpdateSex];

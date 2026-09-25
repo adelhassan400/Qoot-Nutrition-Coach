@@ -365,7 +365,7 @@ components:
         - status
     Profile:
       type: object
-      required: [id, name, age, heightCm, weightKg, targetWeightKg, sex, activityLevel, goal, stepTarget, unitSystem, avatarInitials, onboardingCompleted]
+      required: [id, name, age, heightCm, weightKg, targetWeightKg, sex, activityLevel, goal, stepTarget, unitSystem, avatarInitials, onboardingCompleted, trialStartedAt, trialEndsAt, trialStatus, trialDaysRemaining, premiumAccess]
       properties:
         id: { type: integer }
         name: { type: string }
@@ -380,6 +380,11 @@ components:
         unitSystem: { type: string, enum: [metric, imperial] }
         avatarInitials: { type: string }
         onboardingCompleted: { type: boolean }
+        trialStartedAt: { type: string, format: date-time, nullable: true }
+        trialEndsAt: { type: string, format: date-time, nullable: true }
+        trialStatus: { type: string, enum: [not_started, active, expired] }
+        trialDaysRemaining: { type: integer, minimum: 0 }
+        premiumAccess: { type: boolean }
     ProfileUpdate:
       type: object
       required: [name, age, heightCm, weightKg, targetWeightKg, sex, activityLevel, goal, stepTarget, unitSystem]
